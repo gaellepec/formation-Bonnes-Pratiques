@@ -1,13 +1,5 @@
 rm(list = ls())
 
-if (!require("ggplot2")) install.packages("ggplot2")
-if (!require("stringr")) install.packages("stringr")
-if (!require("dplyr")) install.packages("dplyr")
-if (!require("tidyverse")) install.packages("tidyverse")
-if (!require("MASS")) install.packages("MASS")
-
-
-library(tidyverse)
 library(dplyr)
 library(forcats)
 library(MASS)
@@ -15,14 +7,20 @@ library(yaml)
 
 source("R/functions.R", encoding = "UTF-8")
 
+install.packages("renv")
+install.packages("gt")
+
 # ENVIRONNEMENT ----------------------------
 
-api_token <- yaml::read_yaml("secrets.yaml")$API_TOKEN
+api_token <- yaml::read_yaml("R/secrets.yaml")$JETON_API
+
+
+
 
 # IMPORT DONNEES ----------------------------
 
-# j'importe les données avec read_parquet parce que c'est un parquet avec des ;
-# et que read_parquet attend comme separateur des ,
+# j'importe les données avec read_csv2 parce que c'est un csv avec des ;
+# et que read_csv attend comme separateur des ,
 df <- arrow::read_parquet(
   "individu_reg.parquet",
   col_select  = c(
@@ -87,7 +85,23 @@ df %>%
   ), alpha = 0.2) +
   geom_histogram() # position = "dodge") + scale_fill_viridis_d()
 
+stats_age <- df %>%
+  group_by(decennie = decennie_a_partir_annee(age)) %>%
+  summarise(n())
 
+table_age <- gt::gt(stats_age) %>%
+  gt::tab_header(
+    title = "Distribution des âges dans notre population"
+  ) %>%
+  gt::fmt_number(
+    columns = `n()`,
+    sep_mark = " ",
+    decimals = 0
+  ) %>%
+  gt::cols_label(
+    decennie = "Tranche d'âge",
+    `n()` = "Population"
+  )
 
 ## Part d'homme dans chaque cohorte ===========
 ggplot(df %>%
@@ -164,4 +178,6 @@ df3[, "cs1"] <- factor(df3$cs1)
 df3 %>%
   filter(couple == "2" & aged > 40 & aged < 60)
 polr(surf ~ cs1 + factor(ur), df3)
+
+
 
